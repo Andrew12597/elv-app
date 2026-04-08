@@ -7,7 +7,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-dark.png" alt="ELV Australia" className="h-24 w-auto object-contain" />
+          <img src="/logo.png" alt="ELV Australia" className="h-24 w-auto object-contain" />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
