@@ -2,10 +2,10 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { Camera, Upload, Loader2, CheckCircle } from 'lucide-react'
+import { supabase, COST_CODES } from '@/lib/supabase'
+import { Camera, Upload, Loader2, CheckCircle, X } from 'lucide-react'
 
-type Project = { id: string; name: string }
+type Project = { id: string; project_id: string | null; name: string }
 
 type Props = {
   projects: Project[]
@@ -19,7 +19,16 @@ type Extracted = {
   description: string | null
 }
 
-const PRICE_CODES = ['MATERIALS', 'LABOUR', 'EQUIPMENT', 'TRANSPORT', 'SUBCONTRACT', 'OTHER']
+// Group cost codes by category for the dropdown
+const CODE_CATEGORIES = COST_CODES.reduce<Record<string, typeof COST_CODES>>((acc, c) => {
+  if (!acc[c.category]) acc[c.category] = []
+  acc[c.category].push(c)
+  return acc
+}, {})
+
+function projectLabel(p: Project) {
+  return p.project_id ? `${p.project_id} – ${p.name}` : p.name
+}
 
 export function ReceiptCapture({ projects, defaultProjectId }: Props) {
   const router = useRouter()
@@ -38,7 +47,7 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState('')
   const [description, setDescription] = useState('')
-  const [priceCode, setPriceCode] = useState('MATERIALS')
+  const [priceCode, setPriceCode] = useState(COST_CODES[0].code)
   const [projectId, setProjectId] = useState(defaultProjectId ?? '')
 
   async function handleFile(file: File) {
@@ -49,12 +58,9 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string
       setImagePreview(dataUrl)
-
-      // Extract base64 data
       const base64 = dataUrl.split(',')[1]
       setImageBase64(base64)
 
-      // Auto-extract
       setExtracting(true)
       setError('')
       try {
@@ -81,15 +87,24 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
     reader.readAsDataURL(file)
   }
 
+  function clearImage() {
+    setImagePreview(null)
+    setImageBase64(null)
+    setExtracted(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!projectId) { setError('Please select a project'); return }
+    if (!amount || Number(amount) <= 0) { setError('Please enter a valid amount'); return }
+    if (!date) { setError('Please enter a date'); return }
+    if (!vendor) { setError('Please enter a vendor'); return }
     setSaving(true)
     setError('')
 
     let receipt_url: string | null = null
 
-    // Upload receipt image if we have one
     if (imageBase64) {
       const filename = `${projectId}/${Date.now()}.jpg`
       const blob = await fetch(`data:${mediaType};base64,${imageBase64}`).then(r => r.blob())
@@ -118,24 +133,20 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Image upload */}
-      <div
-        className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors"
-        onClick={() => fileRef.current?.click()}
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
-      >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-        />
+      {/* Receipt upload — optional */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-700">Receipt Photo <span className="font-normal text-gray-400">(optional)</span></p>
+          {imagePreview && (
+            <button type="button" onClick={clearImage} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+              <X className="h-3.5 w-3.5" /> Remove
+            </button>
+          )}
+        </div>
+
         {imagePreview ? (
           <div className="space-y-2">
-            <img src={imagePreview} alt="Receipt" className="max-h-64 mx-auto rounded-lg object-contain" />
+            <img src={imagePreview} alt="Receipt" className="max-h-56 mx-auto rounded-lg object-contain border border-gray-100" />
             {extracting && (
               <div className="flex items-center justify-center gap-2 text-blue-600 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -148,24 +159,38 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
                 Data extracted — review below
               </div>
             )}
-            <p className="text-xs text-gray-400">Click or drag to replace</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex justify-center gap-4">
-              <Camera className="h-10 w-10 text-gray-300" />
-              <Upload className="h-10 w-10 text-gray-300" />
+          <div
+            className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/20 transition-colors"
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+          >
+            <div className="flex justify-center gap-3 mb-2">
+              <Camera className="h-8 w-8 text-gray-300" />
+              <Upload className="h-8 w-8 text-gray-300" />
             </div>
-            <p className="font-medium text-gray-600">Take a photo or upload a receipt</p>
-            <p className="text-sm text-gray-400">AI will automatically extract the vendor, amount and date</p>
+            <p className="text-sm font-medium text-gray-500">Take a photo or upload a receipt</p>
+            <p className="text-xs text-gray-400 mt-1">AI will auto-fill the form · JPG, PNG, HEIC</p>
           </div>
         )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+        />
       </div>
 
       {/* Form */}
       <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className="font-semibold text-gray-900">Expense Details</h2>
 
+        {/* Project */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Project *</label>
           <select
@@ -176,14 +201,14 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
           >
             <option value="">Select project…</option>
             {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{projectLabel(p)}</option>
             ))}
           </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
             <input
               value={vendor}
               onChange={e => setVendor(e.target.value)}
@@ -193,20 +218,20 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
             />
           </div>
           <div className="col-span-2 sm:col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($) *</label>
             <input
               value={amount}
               onChange={e => setAmount(e.target.value)}
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0.00"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
             <input
               value={date}
               onChange={e => setDate(e.target.value)}
@@ -216,14 +241,21 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price Code</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cost Code *</label>
             <select
               value={priceCode}
               onChange={e => setPriceCode(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {PRICE_CODES.map(c => <option key={c} value={c}>{c}</option>)}
+              {Object.entries(CODE_CATEGORIES).map(([category, codes]) => (
+                <optgroup key={category} label={category}>
+                  {codes.map(c => (
+                    <option key={c.code} value={c.code}>{c.label}</option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
+            <p className="text-xs text-gray-400 mt-1">Code: {priceCode}</p>
           </div>
           <div className="col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>

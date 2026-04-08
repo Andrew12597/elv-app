@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import type { Project, Expense, Invoice, Task, QuoteItem } from '@/lib/supabase'
+import { supabase, getCostCodeLabel, STATUS_LABELS, STATUS_COLORS } from '@/lib/supabase'
+import type { Project, Expense, Invoice, Task, QuoteItem, ProjectNote } from '@/lib/supabase'
 import { GanttChart } from './gantt-chart'
-import { Receipt, ArrowLeft, Plus } from 'lucide-react'
+import { NotesSection } from './notes-section'
+import { Receipt, ArrowLeft, Plus, ExternalLink } from 'lucide-react'
 
 type Props = {
   project: Project
@@ -14,16 +15,10 @@ type Props = {
   invoices: Invoice[]
   tasks: Task[]
   quoteItems: QuoteItem[]
+  notes: ProjectNote[]
 }
 
-const tabs = ['Overview', 'Expenses', 'Invoices', 'Gantt', 'Quote']
-
-const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-blue-100 text-blue-700',
-  'on-hold': 'bg-amber-100 text-amber-700',
-  cancelled: 'bg-gray-100 text-gray-500',
-}
+const tabs = ['Overview', 'Expenses', 'Invoices', 'Gantt', 'Quote', 'Notes']
 
 const invoiceStatusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
@@ -32,7 +27,7 @@ const invoiceStatusColors: Record<string, string> = {
   overdue: 'bg-red-100 text-red-700',
 }
 
-export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }: Props) {
+export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, notes }: Props) {
   const [tab, setTab] = useState('Overview')
   const [addingTask, setAddingTask] = useState(false)
   const [addingInvoice, setAddingInvoice] = useState(false)
@@ -86,28 +81,46 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }
         <Link href="/projects" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3">
           <ArrowLeft className="h-3 w-3" /> Projects
         </Link>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
-            <p className="text-gray-500 mt-1">{project.client}</p>
+            <div className="flex items-center gap-3 mb-1">
+              {project.project_id && (
+                <span className="font-mono font-bold text-blue-700 text-lg">{project.project_id}</span>
+              )}
+              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+              <span>{project.client}</span>
+              {project.job_type && <><span>·</span><span>{project.job_type}</span></>}
+              {project.pm && <><span>·</span><span>PM: {project.pm}</span></>}
+            </div>
           </div>
-          <span className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${statusColors[project.status]}`}>
-            {project.status}
-          </span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {project.priority && (
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                project.priority === 'High' ? 'bg-red-100 text-red-700' :
+                project.priority === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                'bg-gray-100 text-gray-500'
+              }`}>{project.priority}</span>
+            )}
+            <span className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${STATUS_COLORS[project.status] ?? 'bg-gray-100 text-gray-600'}`}>
+              {STATUS_LABELS[project.status] ?? project.status}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
               tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t}
+            {t}{t === 'Notes' && notes.length > 0 ? ` (${notes.length})` : ''}
           </button>
         ))}
       </div>
@@ -117,9 +130,9 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Quoted Price', value: `$${Number(project.quoted_price).toLocaleString()}`, sub: '' },
-              { label: 'Total Expenses', value: `$${totalExpenses.toLocaleString()}`, sub: `${((totalExpenses / Number(project.quoted_price)) * 100).toFixed(0)}% of budget` },
-              { label: 'Profit', value: `$${profit.toLocaleString()}`, sub: `${margin.toFixed(1)}% margin`, color: profit >= 0 ? 'text-green-600' : 'text-red-600' },
+              { label: 'Contract Value', value: project.quoted_price > 0 ? `$${Number(project.quoted_price).toLocaleString()}` : '—', sub: project.quoted_price === 0 ? 'No contract yet' : '' },
+              { label: 'Total Expenses', value: `$${totalExpenses.toLocaleString()}`, sub: project.quoted_price > 0 ? `${((totalExpenses / Number(project.quoted_price)) * 100).toFixed(0)}% of contract` : '' },
+              { label: 'Gross Profit', value: project.quoted_price > 0 ? `$${profit.toLocaleString()}` : '—', sub: project.quoted_price > 0 ? `${margin.toFixed(1)}% margin` : '', color: profit >= 0 ? 'text-green-600' : 'text-red-600' },
               { label: 'Revenue Collected', value: `$${totalInvoiced.toLocaleString()}`, sub: '' },
             ].map(stat => (
               <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
@@ -130,33 +143,43 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }
             ))}
           </div>
 
-          {/* Budget bar */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="font-medium text-gray-700">Budget Usage</span>
-              <span className="text-gray-500">${totalExpenses.toLocaleString()} / ${Number(project.quoted_price).toLocaleString()}</span>
+          {project.quoted_price > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium text-gray-700">Budget Usage</span>
+                <span className="text-gray-500">${totalExpenses.toLocaleString()} / ${Number(project.quoted_price).toLocaleString()}</span>
+              </div>
+              <div className="bg-gray-100 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${totalExpenses > Number(project.quoted_price) ? 'bg-red-500' : totalExpenses / Number(project.quoted_price) > 0.85 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  style={{ width: `${Math.min((totalExpenses / Math.max(Number(project.quoted_price), 1)) * 100, 100)}%` }}
+                />
+              </div>
             </div>
-            <div className="bg-gray-100 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${totalExpenses > Number(project.quoted_price) ? 'bg-red-500' : totalExpenses / Number(project.quoted_price) > 0.85 ? 'bg-amber-500' : 'bg-blue-500'}`}
-                style={{ width: `${Math.min((totalExpenses / Math.max(Number(project.quoted_price), 1)) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
+          )}
 
           {project.description && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <p className="text-sm font-medium text-gray-700 mb-2">Description</p>
-              <p className="text-sm text-gray-600">{project.description}</p>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.description}</p>
             </div>
           )}
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-sm font-medium text-gray-700 mb-3">Timeline</p>
-            <div className="flex gap-8 text-sm">
-              <div><p className="text-gray-500">Start</p><p className="font-medium">{project.start_date}</p></div>
-              <div><p className="text-gray-500">End</p><p className="font-medium">{project.end_date}</p></div>
-            </div>
+            <p className="text-sm font-medium text-gray-700 mb-3">Details</p>
+            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+              <div><dt className="text-gray-500">Start</dt><dd className="font-medium text-gray-900">{project.start_date || '—'}</dd></div>
+              <div><dt className="text-gray-500">End</dt><dd className="font-medium text-gray-900">{project.end_date || '—'}</dd></div>
+              {project.owner && <div><dt className="text-gray-500">Owner</dt><dd className="font-medium text-gray-900">{project.owner}</dd></div>}
+              {project.next_action && (
+                <div className="col-span-2">
+                  <dt className="text-gray-500">Next Action</dt>
+                  <dd className="font-medium text-gray-900">{project.next_action}
+                    {project.next_action_due && <span className={`ml-2 text-xs ${new Date(project.next_action_due) < new Date() ? 'text-red-600' : 'text-gray-400'}`}>due {project.next_action_due}</span>}
+                  </dd>
+                </div>
+              )}
+            </dl>
           </div>
         </div>
       )}
@@ -170,32 +193,52 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               <Receipt className="h-4 w-4" />
-              Add Expense / Scan Receipt
+              Add Expense
             </Link>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-            {expenses.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 text-sm">No expenses yet</div>
-            ) : (
-              expenses.map(exp => (
-                <div key={exp.id} className="flex items-center gap-4 px-6 py-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{exp.vendor}</p>
-                    <p className="text-xs text-gray-500">{exp.description} · {exp.date}</p>
-                  </div>
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">{exp.price_code}</span>
-                  <p className="font-semibold text-gray-900">${Number(exp.amount).toLocaleString()}</p>
-                  {exp.receipt_url && (
-                    <a href={exp.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                      Receipt
-                    </a>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-          <div className="text-right text-sm font-semibold text-gray-900">
-            Total: ${totalExpenses.toLocaleString()}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Vendor</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cost Code</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Receipt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {expenses.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">No expenses yet</td></tr>
+                ) : expenses.map(exp => (
+                  <tr key={exp.id} className="hover:bg-gray-50/60">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{exp.date}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{exp.vendor}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{exp.description}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">{exp.price_code}</span>
+                      <span className="text-xs text-gray-400 ml-1.5 hidden lg:inline">{getCostCodeLabel(exp.price_code)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">${Number(exp.amount).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center">
+                      {exp.receipt_url
+                        ? <a href={exp.receipt_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium">View <ExternalLink className="h-3 w-3" /></a>
+                        : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              {expenses.length > 0 && (
+                <tfoot>
+                  <tr className="bg-gray-50 border-t border-gray-200">
+                    <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-900">${totalExpenses.toLocaleString()}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
           </div>
         </div>
       )}
@@ -321,6 +364,11 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems }
       {/* Quote */}
       {tab === 'Quote' && (
         <QuoteTab projectId={project.id} quoteItems={quoteItems} totalQuote={totalQuote} />
+      )}
+
+      {/* Notes */}
+      {tab === 'Notes' && (
+        <NotesSection projectId={project.id} notes={notes} />
       )}
     </div>
   )

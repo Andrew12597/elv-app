@@ -6,8 +6,8 @@ export default async function NewExpensePage(props: PageProps<'/expenses/new'>) 
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id, name')
-    .order('name')
+    .select('id, project_id, name')
+    .order('project_id')
 
   return (
     <div className="p-8 max-w-2xl">

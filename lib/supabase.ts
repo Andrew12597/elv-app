@@ -69,56 +69,75 @@ export type QuoteItem = {
   created_at: string
 }
 
-export const COST_CODES = [
+export type ProjectNote = {
+  id: string
+  project_id: string
+  content: string | null
+  author: string
+  photo_url: string | null
+  created_at: string
+}
+
+export type CostCode = {
+  code: string
+  label: string
+  category: string
+}
+
+export const COST_CODES: CostCode[] = [
   // Labour
-  '9-01.001 Cabling - Data',
-  '9-01.002 Cabling - Security',
-  '9-01.003 Cabling - Access Control',
-  '9-01.004 Commissioning - CCTV',
-  '9-01.005 Commissioning - Smart Automation',
-  '9-01.007 Commissioning - Access Control',
-  '9-01.008 Conduit / Tray Installation',
+  { code: '9-01.001', label: 'Cabling - Data', category: 'Labour' },
+  { code: '9-01.002', label: 'Cabling - Security', category: 'Labour' },
+  { code: '9-01.003', label: 'Cabling - Access Control', category: 'Labour' },
+  { code: '9-01.004', label: 'Commissioning - CCTV', category: 'Labour' },
+  { code: '9-01.005', label: 'Commissioning - Smart Automation', category: 'Labour' },
+  { code: '9-01.007', label: 'Commissioning - Access Control', category: 'Labour' },
+  { code: '9-01.008', label: 'Conduit / Tray Installation', category: 'Labour' },
   // Materials - CCTV
-  '9-02.001 Cameras (IP/Analogue)',
-  '9-02.002 NVRs / Licensing',
-  '9-02.004 CCTV Power Supplies',
+  { code: '9-02.001', label: 'Cameras (IP/Analogue)', category: 'Materials - CCTV' },
+  { code: '9-02.002', label: 'NVRs / Licensing', category: 'Materials - CCTV' },
+  { code: '9-02.004', label: 'CCTV Power Supplies', category: 'Materials - CCTV' },
   // Materials - Access Control
-  '9-03.001 Door Controllers / Racks',
-  '9-03.002 Access Control Readers / Keypads',
-  '9-03.003 Maglocks',
-  '9-03.004 Strikes / Gate Kits',
+  { code: '9-03.001', label: 'Door Controllers / Racks', category: 'Materials - Access Control' },
+  { code: '9-03.002', label: 'Access Control Readers / Keypads', category: 'Materials - Access Control' },
+  { code: '9-03.003', label: 'Maglocks', category: 'Materials - Access Control' },
+  { code: '9-03.004', label: 'Strikes / Gate Kits', category: 'Materials - Access Control' },
   // Materials - Intercom
-  '9-04.001 Intercom Room Stations',
-  '9-04.002 Intercom Door Stations',
+  { code: '9-04.001', label: 'Intercom Room Stations', category: 'Materials - Intercom' },
+  { code: '9-04.002', label: 'Intercom Door Stations', category: 'Materials - Intercom' },
   // Materials - Data
-  '9-06.001 Cat6 / Cat6A Cable',
-  '9-06.002 Fibre Trunk Cable',
-  '9-06.004 Patch Panels / Outlets',
-  '9-06.005 Accessories',
+  { code: '9-06.001', label: 'Cat6 / Cat6A Cable', category: 'Materials - Data' },
+  { code: '9-06.002', label: 'Fibre Trunk Cable', category: 'Materials - Data' },
+  { code: '9-06.004', label: 'Patch Panels / Outlets', category: 'Materials - Data' },
+  { code: '9-06.005', label: 'Accessories', category: 'Materials - Data' },
   // Equipment
-  '9-07.004 Tools & Consumables',
-  '9-07.006 Scissor Lift / Boom Lift Hire',
-  '9-07.007 Equipment Hire (General)',
+  { code: '9-07.004', label: 'Tools & Consumables', category: 'Equipment' },
+  { code: '9-07.006', label: 'Scissor Lift / Boom Lift Hire', category: 'Equipment' },
+  { code: '9-07.007', label: 'Equipment Hire (General)', category: 'Equipment' },
   // Subcontractors
-  '9-08.001 Subcontract - Data',
-  '9-08.002 Subcontract - CCTV',
-  '9-08.003 Subcontract - Access Control',
-  '9-08.006 Subcontract - Electricians',
+  { code: '9-08.001', label: 'Subcontract - Data', category: 'Subcontractors' },
+  { code: '9-08.002', label: 'Subcontract - CCTV', category: 'Subcontractors' },
+  { code: '9-08.003', label: 'Subcontract - Access Control', category: 'Subcontractors' },
+  { code: '9-08.006', label: 'Subcontract - Electricians', category: 'Subcontractors' },
   // Project Costs
-  '9-09.001 Design & Drawings',
-  '9-09.005 Testing & Certification',
-  '9-09.006 Programming / Remote Works',
+  { code: '9-09.001', label: 'Design & Drawings', category: 'Project Costs' },
+  { code: '9-09.005', label: 'Testing & Certification', category: 'Project Costs' },
+  { code: '9-09.006', label: 'Programming / Remote Works', category: 'Project Costs' },
   // Operations
-  '9-10.001 Office Supplies',
-  '9-10.002 Subscriptions / Licences',
-  '9-10.003 Insurances',
-  '9-10.004 Travel / Accommodation',
-  '9-10.005 Legal Fees',
+  { code: '9-10.001', label: 'Office Supplies', category: 'Operations' },
+  { code: '9-10.002', label: 'Subscriptions / Licences', category: 'Operations' },
+  { code: '9-10.003', label: 'Insurances', category: 'Operations' },
+  { code: '9-10.004', label: 'Travel / Accommodation', category: 'Operations' },
+  { code: '9-10.005', label: 'Legal Fees', category: 'Operations' },
   // Security Material
-  '9-12.001 Alarms',
+  { code: '9-12.001', label: 'Alarms', category: 'Security Material' },
 ]
 
-export const JOB_TYPES = ['New Build', 'Service', 'Upgrade', 'Maintenance', 'Consultation']
+export function getCostCodeLabel(code: string): string {
+  return COST_CODES.find(c => c.code === code)?.label ?? code
+}
+
+export const JOB_TYPES = ['New Build', 'Service', 'Upgrade', 'Maintenance', 'Consultation', 'Add-on', 'Automation', 'Gate / Intercom', 'Home Intercom', 'Smart Home', 'Retirement Village', 'Building Site CCTV', 'Fix']
 
 export const STATUS_LABELS: Record<string, string> = {
   'active': 'Active',
@@ -129,9 +148,21 @@ export const STATUS_LABELS: Record<string, string> = {
   'cancelled': 'Cancelled',
 }
 
-export function getProjectHealth(project: Project, totalExpenses: number): string {
-  if (project.status !== 'active') return project.status
-  if (!project.quoted_price || project.quoted_price === 0) return 'needs-contract'
+export const STATUS_COLORS: Record<string, string> = {
+  'active': 'bg-green-100 text-green-700',
+  'waiting-approval': 'bg-blue-100 text-blue-700',
+  'quoting': 'bg-purple-100 text-purple-700',
+  'on-hold': 'bg-amber-100 text-amber-700',
+  'completed': 'bg-gray-100 text-gray-600',
+  'cancelled': 'bg-red-100 text-red-500',
+}
+
+export function getProjectHealth(project: Project): 'on-track' | 'action-overdue' | 'needs-contract' {
+  if (!project.quoted_price || Number(project.quoted_price) === 0) return 'needs-contract'
   if (project.next_action_due && new Date(project.next_action_due) < new Date()) return 'action-overdue'
   return 'on-track'
+}
+
+export function projectLabel(p: { project_id?: string | null; name: string }) {
+  return p.project_id ? `${p.project_id} – ${p.name}` : p.name
 }
