@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Receipt, FileText, BarChart3, Shield, LogOut } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Receipt, FileText, BarChart3, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
@@ -27,13 +28,16 @@ export function Sidebar() {
   return (
     <aside className="w-56 bg-slate-900 flex flex-col shrink-0">
       {/* Logo */}
-      <div className="h-14 flex items-center gap-3 px-5 border-b border-slate-800">
-        <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
-          <Shield className="h-4 w-4 text-white" />
-        </div>
-        <div>
-          <p className="font-bold text-white text-sm leading-tight">ELV Australia</p>
-          <p className="text-xs text-slate-500 leading-tight">Projects</p>
+      <div className="h-16 flex items-center justify-center px-4 border-b border-slate-800">
+        <div className="bg-white rounded-xl px-3 py-1.5">
+          <Image
+            src="/ELV White background.png"
+            alt="ELV Australia"
+            width={120}
+            height={40}
+            className="object-contain h-8 w-auto"
+            priority
+          />
         </div>
       </div>
 

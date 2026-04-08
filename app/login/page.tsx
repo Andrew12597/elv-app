@@ -1,19 +1,20 @@
 import { LoginForm } from './login-form'
-import { Shield } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="font-bold text-white text-lg leading-tight">ELV Australia</p>
-            <p className="text-xs text-slate-400">Project Management</p>
-          </div>
+        <div className="flex justify-center mb-8">
+          <Image
+            src="/ELV Transparent background.png"
+            alt="ELV Australia"
+            width={180}
+            height={80}
+            className="object-contain"
+            priority
+          />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
