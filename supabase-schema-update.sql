@@ -15,6 +15,20 @@ alter table projects drop constraint if exists projects_status_check;
 alter table projects add constraint projects_status_check
   check (status in ('active', 'waiting-approval', 'quoting', 'on-hold', 'completed', 'cancelled', 'archived'));
 
+-- Labour entries (hourly or flat-rate labour costs per project)
+create table if not exists labour_entries (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  worker_name text not null,
+  date date not null,
+  type text not null check (type in ('hourly', 'flat')),
+  hours numeric(8,2),
+  rate numeric(10,2),
+  amount numeric(10,2) not null,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
 -- Project notes (timestamped notes and photos per project)
 create table if not exists project_notes (
   id uuid primary key default gen_random_uuid(),

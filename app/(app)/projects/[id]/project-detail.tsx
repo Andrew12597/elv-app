@@ -4,10 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase, getCostCodeLabel, STATUS_LABELS, STATUS_COLORS } from '@/lib/supabase'
-import type { Project, Expense, Invoice, Task, QuoteItem, ProjectNote } from '@/lib/supabase'
+import type { Project, Expense, Invoice, Task, QuoteItem, ProjectNote, LabourEntry } from '@/lib/supabase'
 import { GanttChart } from './gantt-chart'
 import { NotesSection } from './notes-section'
 import { EditProjectForm } from './edit-project-form'
+import { LabourSection } from './labour-section'
 import { Receipt, ArrowLeft, Plus, ExternalLink, Pencil, Archive, Trash2 } from 'lucide-react'
 
 type Props = {
@@ -17,9 +18,10 @@ type Props = {
   tasks: Task[]
   quoteItems: QuoteItem[]
   notes: ProjectNote[]
+  labourEntries: LabourEntry[]
 }
 
-const tabs = ['Overview', 'Expenses', 'Invoices', 'Gantt', 'Quote', 'Notes']
+const tabs = ['Overview', 'Expenses', 'Labour', 'Invoices', 'Gantt', 'Quote', 'Notes']
 
 const invoiceStatusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
@@ -28,7 +30,7 @@ const invoiceStatusColors: Record<string, string> = {
   overdue: 'bg-red-100 text-red-700',
 }
 
-export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, notes }: Props) {
+export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, notes, labourEntries }: Props) {
   const [tab, setTab] = useState('Overview')
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -48,8 +50,10 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
   }
 
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
+  const totalLabour = labourEntries.reduce((s, e) => s + Number(e.amount), 0)
+  const totalCosts = totalExpenses + totalLabour
   const totalInvoiced = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
-  const profit = Number(project.quoted_price) - totalExpenses
+  const profit = Number(project.quoted_price) - totalCosts
   const margin = project.quoted_price > 0 ? (profit / Number(project.quoted_price)) * 100 : 0
   const totalQuote = quoteItems.reduce((s, q) => s + Number(q.quantity) * Number(q.unit_price), 0)
 
@@ -182,7 +186,9 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
               tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t}{t === 'Notes' && notes.length > 0 ? ` (${notes.length})` : ''}
+            {t}
+            {t === 'Notes' && notes.length > 0 ? ` (${notes.length})` : ''}
+            {t === 'Labour' && labourEntries.length > 0 ? ` (${labourEntries.length})` : ''}
           </button>
         ))}
       </div>
@@ -193,7 +199,7 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Contract Value', value: project.quoted_price > 0 ? `$${Number(project.quoted_price).toLocaleString()}` : '—', sub: project.quoted_price === 0 ? 'No contract yet' : '' },
-              { label: 'Total Expenses', value: `$${totalExpenses.toLocaleString()}`, sub: project.quoted_price > 0 ? `${((totalExpenses / Number(project.quoted_price)) * 100).toFixed(0)}% of contract` : '' },
+              { label: 'Total Costs', value: `$${totalCosts.toLocaleString()}`, sub: `Materials $${totalExpenses.toLocaleString()} · Labour $${totalLabour.toLocaleString()}` },
               { label: 'Gross Profit', value: project.quoted_price > 0 ? `$${profit.toLocaleString()}` : '—', sub: project.quoted_price > 0 ? `${margin.toFixed(1)}% margin` : '', color: profit >= 0 ? 'text-green-600' : 'text-red-600' },
               { label: 'Revenue Collected', value: `$${totalInvoiced.toLocaleString()}`, sub: '' },
             ].map(stat => (
@@ -209,13 +215,23 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex justify-between text-sm mb-2">
                 <span className="font-medium text-gray-700">Budget Usage</span>
-                <span className="text-gray-500">${totalExpenses.toLocaleString()} / ${Number(project.quoted_price).toLocaleString()}</span>
+                <span className="text-gray-500">${totalCosts.toLocaleString()} / ${Number(project.quoted_price).toLocaleString()}</span>
               </div>
-              <div className="bg-gray-100 rounded-full h-2">
+              <div className="bg-gray-100 rounded-full h-3 flex overflow-hidden">
                 <div
-                  className={`h-2 rounded-full transition-all ${totalExpenses > Number(project.quoted_price) ? 'bg-red-500' : totalExpenses / Number(project.quoted_price) > 0.85 ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  className="h-3 bg-blue-500 transition-all"
                   style={{ width: `${Math.min((totalExpenses / Math.max(Number(project.quoted_price), 1)) * 100, 100)}%` }}
+                  title={`Materials: $${totalExpenses.toLocaleString()}`}
                 />
+                <div
+                  className="h-3 bg-violet-400 transition-all"
+                  style={{ width: `${Math.min((totalLabour / Math.max(Number(project.quoted_price), 1)) * 100, 100)}%` }}
+                  title={`Labour: $${totalLabour.toLocaleString()}`}
+                />
+              </div>
+              <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />Materials ${totalExpenses.toLocaleString()}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />Labour ${totalLabour.toLocaleString()}</span>
               </div>
             </div>
           )}
@@ -303,6 +319,11 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
             </table>
           </div>
         </div>
+      )}
+
+      {/* Labour */}
+      {tab === 'Labour' && (
+        <LabourSection projectId={project.id} entries={labourEntries} />
       )}
 
       {/* Invoices */}

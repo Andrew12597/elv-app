@@ -69,6 +69,19 @@ export type QuoteItem = {
   created_at: string
 }
 
+export type LabourEntry = {
+  id: string
+  project_id: string
+  worker_name: string
+  date: string
+  type: 'hourly' | 'flat'
+  hours: number | null
+  rate: number | null
+  amount: number
+  notes: string | null
+  created_at: string
+}
+
 export type ProjectNote = {
   id: string
   project_id: string
