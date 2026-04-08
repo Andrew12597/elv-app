@@ -2,10 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { JOB_TYPES } from '@/lib/supabase'
+import { supabase, JOB_TYPES, STATUS_LABELS } from '@/lib/supabase'
 
-export function NewProjectForm() {
+type Props = { nextProjectId: string }
+
+const STATUSES = ['active', 'quoting', 'waiting-approval', 'on-hold', 'completed', 'cancelled'] as const
+
+const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+const label = 'block text-xs font-semibold text-gray-500 mb-1'
+
+export function NewProjectForm({ nextProjectId }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -15,7 +21,7 @@ export function NewProjectForm() {
     setSaving(true)
     setError('')
     const fd = new FormData(e.currentTarget)
-    const { error } = await supabase.from('projects').insert({
+    const { error: err } = await supabase.from('projects').insert({
       project_id: fd.get('project_id') || null,
       name: fd.get('name'),
       client: fd.get('client'),
@@ -32,63 +38,62 @@ export function NewProjectForm() {
       next_action: fd.get('next_action') || null,
       next_action_due: fd.get('next_action_due') || null,
     })
-    if (error) { setError(error.message); setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
     router.push('/projects')
     router.refresh()
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Identity */}
+      {/* ID + Name */}
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Project ID</label>
-          <input name="project_id" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. P2501" />
+          <label className={label}>Project ID</label>
+          <input
+            name="project_id"
+            defaultValue={nextProjectId}
+            className={`${input} font-mono font-bold text-blue-700`}
+            placeholder="e.g. P2610"
+          />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Project / Location *</label>
-          <input name="name" required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Melrose Park" />
+          <label className={label}>Project / Location *</label>
+          <input name="name" required className={input} placeholder="e.g. Melrose Park" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Client *</label>
-          <input name="client" required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Client name" />
+          <label className={label}>Client *</label>
+          <input name="client" required className={input} placeholder="Client name" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Owner</label>
-          <input name="owner" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Rothschild" />
+          <label className={label}>Owner</label>
+          <input name="owner" className={input} placeholder="e.g. Rothschild" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">PM</label>
-          <input name="pm" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Project manager name" />
+          <label className={label}>Project Manager</label>
+          <input name="pm" className={input} placeholder="PM name" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Job Type</label>
-          <select name="job_type" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">Select...</option>
+          <label className={label}>Job Type</label>
+          <select name="job_type" className={input}>
+            <option value="">— Select —</option>
             {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Status / Priority */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-          <select name="status" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="active">Active</option>
-            <option value="quoting">Quoting</option>
-            <option value="waiting-approval">Waiting Approval</option>
-            <option value="on-hold">On Hold</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+          <label className={label}>Status</label>
+          <select name="status" className={input}>
+            {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
-          <select name="priority" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label className={label}>Priority</label>
+          <select name="priority" className={input}>
             <option value="High">High</option>
             <option value="Medium">Medium</option>
             <option value="Low">Low</option>
@@ -96,51 +101,48 @@ export function NewProjectForm() {
         </div>
       </div>
 
-      {/* Financials */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Contract Price (inc GST)</label>
-          <input name="quoted_price" type="number" step="0.01" min="0" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+          <label className={label}>Contract Price ($)</label>
+          <input name="quoted_price" type="number" step="0.01" min="0" className={input} placeholder="0.00" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Budget Cost</label>
-          <input name="budget_cost" type="number" step="0.01" min="0" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+          <label className={label}>Budget Cost ($)</label>
+          <input name="budget_cost" type="number" step="0.01" min="0" className={input} placeholder="0.00" />
         </div>
       </div>
 
-      {/* Dates */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Planned Start *</label>
-          <input name="start_date" type="date" required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className={label}>Start Date *</label>
+          <input name="start_date" type="date" required className={input} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Planned End *</label>
-          <input name="end_date" type="date" required className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className={label}>End Date *</label>
+          <input name="end_date" type="date" required className={input} />
         </div>
       </div>
 
-      {/* Next action */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Next Action</label>
-          <input name="next_action" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Submit variation" />
+          <label className={label}>Next Action</label>
+          <input name="next_action" className={input} placeholder="e.g. Submit variation" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Next Action Due</label>
-          <input name="next_action_due" type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className={label}>Next Action Due</label>
+          <input name="next_action_due" type="date" className={input} />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Description / Scope</label>
-        <textarea name="description" rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Scope of work..." />
+        <label className={label}>Description / Scope</label>
+        <textarea name="description" rows={3} className={`${input} resize-none`} placeholder="Scope of work…" />
       </div>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
-      <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={saving} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
+      <div className="flex gap-3 pt-1">
+        <button type="submit" disabled={saving} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
           {saving ? 'Saving…' : 'Create Project'}
         </button>
         <a href="/projects" className="px-5 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">

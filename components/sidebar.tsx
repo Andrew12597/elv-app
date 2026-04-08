@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Receipt, FileText, BarChart3, Shield } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, FolderKanban, Receipt, FileText, BarChart3, Shield, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,6 +16,13 @@ const nav = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <aside className="w-56 bg-slate-900 flex flex-col shrink-0">
@@ -51,9 +59,15 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-slate-800">
-        <p className="text-xs text-slate-600">Security &amp; Access Control</p>
+      {/* Sign out */}
+      <div className="px-2 pb-3 border-t border-slate-800 pt-3">
+        <button
+          onClick={signOut}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors w-full"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          Sign out
+        </button>
       </div>
     </aside>
   )
