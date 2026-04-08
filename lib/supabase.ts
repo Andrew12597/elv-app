@@ -70,13 +70,52 @@ export type QuoteItem = {
 }
 
 export const COST_CODES = [
-  'MATERIALS',
-  'LABOUR',
-  'SUBCONTRACT',
-  'EQUIPMENT',
-  'TRANSPORT',
-  'OFFICE SUPPLIES',
-  'OTHER',
+  // Labour
+  '9-01.001 Cabling - Data',
+  '9-01.002 Cabling - Security',
+  '9-01.003 Cabling - Access Control',
+  '9-01.004 Commissioning - CCTV',
+  '9-01.005 Commissioning - Smart Automation',
+  '9-01.007 Commissioning - Access Control',
+  '9-01.008 Conduit / Tray Installation',
+  // Materials - CCTV
+  '9-02.001 Cameras (IP/Analogue)',
+  '9-02.002 NVRs / Licensing',
+  '9-02.004 CCTV Power Supplies',
+  // Materials - Access Control
+  '9-03.001 Door Controllers / Racks',
+  '9-03.002 Access Control Readers / Keypads',
+  '9-03.003 Maglocks',
+  '9-03.004 Strikes / Gate Kits',
+  // Materials - Intercom
+  '9-04.001 Intercom Room Stations',
+  '9-04.002 Intercom Door Stations',
+  // Materials - Data
+  '9-06.001 Cat6 / Cat6A Cable',
+  '9-06.002 Fibre Trunk Cable',
+  '9-06.004 Patch Panels / Outlets',
+  '9-06.005 Accessories',
+  // Equipment
+  '9-07.004 Tools & Consumables',
+  '9-07.006 Scissor Lift / Boom Lift Hire',
+  '9-07.007 Equipment Hire (General)',
+  // Subcontractors
+  '9-08.001 Subcontract - Data',
+  '9-08.002 Subcontract - CCTV',
+  '9-08.003 Subcontract - Access Control',
+  '9-08.006 Subcontract - Electricians',
+  // Project Costs
+  '9-09.001 Design & Drawings',
+  '9-09.005 Testing & Certification',
+  '9-09.006 Programming / Remote Works',
+  // Operations
+  '9-10.001 Office Supplies',
+  '9-10.002 Subscriptions / Licences',
+  '9-10.003 Insurances',
+  '9-10.004 Travel / Accommodation',
+  '9-10.005 Legal Fees',
+  // Security Material
+  '9-12.001 Alarms',
 ]
 
 export const JOB_TYPES = ['New Build', 'Service', 'Upgrade', 'Maintenance', 'Consultation']
