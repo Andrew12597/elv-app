@@ -69,18 +69,19 @@ export function ReceiptCapture({ projects, defaultProjectId }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageBase64: base64, mediaType: mt }),
         })
+        const json = await res.json()
         if (res.ok) {
-          const data: Extracted = await res.json()
+          const data: Extracted = json
           setExtracted(data)
           if (data.vendor) setVendor(data.vendor)
           if (data.amount) setAmount(String(data.amount))
           if (data.date) setDate(data.date)
           if (data.description) setDescription(data.description)
         } else {
-          setError('Could not extract receipt data. Please fill in manually.')
+          setError(json.error ?? 'Could not extract receipt data. Please fill in manually.')
         }
-      } catch {
-        setError('Extraction failed. Please fill in manually.')
+      } catch (err) {
+        setError('Extraction failed — please fill in manually.')
       }
       setExtracting(false)
     }
