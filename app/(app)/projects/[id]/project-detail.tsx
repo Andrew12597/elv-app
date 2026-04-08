@@ -7,7 +7,8 @@ import { supabase, getCostCodeLabel, STATUS_LABELS, STATUS_COLORS } from '@/lib/
 import type { Project, Expense, Invoice, Task, QuoteItem, ProjectNote } from '@/lib/supabase'
 import { GanttChart } from './gantt-chart'
 import { NotesSection } from './notes-section'
-import { Receipt, ArrowLeft, Plus, ExternalLink } from 'lucide-react'
+import { EditProjectForm } from './edit-project-form'
+import { Receipt, ArrowLeft, Plus, ExternalLink, Pencil } from 'lucide-react'
 
 type Props = {
   project: Project
@@ -29,6 +30,7 @@ const invoiceStatusColors: Record<string, string> = {
 
 export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, notes }: Props) {
   const [tab, setTab] = useState('Overview')
+  const [editing, setEditing] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
   const [addingInvoice, setAddingInvoice] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -106,9 +108,20 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
             <span className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${STATUS_COLORS[project.status] ?? 'bg-gray-100 text-gray-600'}`}>
               {STATUS_LABELS[project.status] ?? project.status}
             </span>
+            <button
+              onClick={() => setEditing(e => !e)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors bg-white"
+            >
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Edit form */}
+      {editing && (
+        <EditProjectForm project={project} onClose={() => setEditing(false)} />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
