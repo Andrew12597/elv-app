@@ -1,5 +1,4 @@
 import { LoginForm } from './login-form'
-import Image from 'next/image'
 
 export default function LoginPage() {
   return (
@@ -7,14 +6,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Image
-            src="/ELV Transparent background.png"
-            alt="ELV Australia"
-            width={180}
-            height={80}
-            className="object-contain"
-            priority
-          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-dark.png" alt="ELV Australia" className="h-24 w-auto object-contain" />
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
