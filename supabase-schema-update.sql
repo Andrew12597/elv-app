@@ -14,3 +14,13 @@ alter table projects
 alter table projects drop constraint if exists projects_status_check;
 alter table projects add constraint projects_status_check
   check (status in ('active', 'waiting-approval', 'quoting', 'on-hold', 'completed', 'cancelled'));
+
+-- Project notes (timestamped notes and photos per project)
+create table if not exists project_notes (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references projects(id) on delete cascade,
+  content text,
+  author text not null,
+  photo_url text,
+  created_at timestamptz not null default now()
+);
