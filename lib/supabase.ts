@@ -7,13 +7,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export type Project = {
   id: string
+  project_id: string | null
   name: string
   client: string
-  status: 'active' | 'completed' | 'on-hold' | 'cancelled'
+  pm: string | null
+  job_type: string | null
+  owner: string | null
+  priority: 'High' | 'Medium' | 'Low' | null
+  status: 'active' | 'waiting-approval' | 'quoting' | 'on-hold' | 'completed' | 'cancelled'
   quoted_price: number
+  budget_cost: number | null
   start_date: string
   end_date: string
-  description: string
+  description: string | null
+  next_action: string | null
+  next_action_due: string | null
   created_at: string
 }
 
@@ -59,4 +67,32 @@ export type QuoteItem = {
   unit_price: number
   type: 'material' | 'labour'
   created_at: string
+}
+
+export const COST_CODES = [
+  'MATERIALS',
+  'LABOUR',
+  'SUBCONTRACT',
+  'EQUIPMENT',
+  'TRANSPORT',
+  'OFFICE SUPPLIES',
+  'OTHER',
+]
+
+export const JOB_TYPES = ['New Build', 'Service', 'Upgrade', 'Maintenance', 'Consultation']
+
+export const STATUS_LABELS: Record<string, string> = {
+  'active': 'Active',
+  'waiting-approval': 'Waiting Approval',
+  'quoting': 'Quoting',
+  'on-hold': 'On Hold',
+  'completed': 'Completed',
+  'cancelled': 'Cancelled',
+}
+
+export function getProjectHealth(project: Project, totalExpenses: number): string {
+  if (project.status !== 'active') return project.status
+  if (!project.quoted_price || project.quoted_price === 0) return 'needs-contract'
+  if (project.next_action_due && new Date(project.next_action_due) < new Date()) return 'action-overdue'
+  return 'on-track'
 }
