@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, FolderKanban, Receipt, FileText, BarChart3, LogOut } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Receipt, HardHat, FileText, BarChart3, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase-browser'
 
@@ -10,6 +10,7 @@ const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/projects', label: 'Projects', icon: FolderKanban },
   { href: '/expenses', label: 'Expenses', icon: Receipt },
+  { href: '/labour', label: 'Labour', icon: HardHat },
   { href: '/quotes', label: 'Quotes', icon: FileText },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
 ]

@@ -29,7 +29,7 @@ export default async function ProjectsPage() {
   }))
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Projects</h1>
@@ -37,7 +37,7 @@ export default async function ProjectsPage() {
         </div>
         <Link
           href="/projects/new"
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          className="hidden sm:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" /> New Project
         </Link>

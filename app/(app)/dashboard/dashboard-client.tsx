@@ -96,25 +96,25 @@ export function DashboardClient({ projects, expenses, invoices }: Props) {
   ]
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">ELV Australia — Project Portfolio</p>
+          <p className="text-sm text-gray-500 mt-0.5">ELV Australia</p>
         </div>
         <Link
           href="/projects/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 sm:px-4 rounded-lg text-sm font-semibold transition-colors"
         >
-          <Plus className="h-4 w-4" /> New Project
+          <Plus className="h-4 w-4" /> <span className="hidden sm:inline">New Project</span>
         </Link>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map(k => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <div className="flex items-start justify-between mb-4">
               <div className={`${k.light} p-2 rounded-xl`}>
                 <k.icon className={`h-4 w-4 ${k.text}`} />
