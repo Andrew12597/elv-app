@@ -13,7 +13,7 @@ alter table projects
 -- Update status check to match your workflow
 alter table projects drop constraint if exists projects_status_check;
 alter table projects add constraint projects_status_check
-  check (status in ('active', 'waiting-approval', 'quoting', 'on-hold', 'completed', 'cancelled'));
+  check (status in ('active', 'waiting-approval', 'quoting', 'on-hold', 'completed', 'cancelled', 'archived'));
 
 -- Project notes (timestamped notes and photos per project)
 create table if not exists project_notes (

@@ -23,7 +23,7 @@ type Props = {
   rows: ProjectRow[]
 }
 
-const STATUSES = ['active', 'quoting', 'waiting-approval', 'on-hold', 'completed', 'cancelled']
+const STATUSES = ['active', 'quoting', 'waiting-approval', 'on-hold', 'completed', 'cancelled', 'archived']
 
 export function ProjectsClient({ rows }: Props) {
   const [search, setSearch] = useState('')
@@ -61,6 +61,7 @@ export function ProjectsClient({ rows }: Props) {
     'on-hold': 'bg-amber-400',
     completed: 'bg-gray-400',
     cancelled: 'bg-red-400',
+    archived: 'bg-slate-400',
   }
 
   return (

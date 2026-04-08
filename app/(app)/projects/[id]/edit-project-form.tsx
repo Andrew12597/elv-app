@@ -11,7 +11,7 @@ type Props = {
   onClose: () => void
 }
 
-const STATUSES = ['active', 'quoting', 'waiting-approval', 'on-hold', 'completed', 'cancelled'] as const
+const STATUSES = ['active', 'quoting', 'waiting-approval', 'on-hold', 'completed', 'cancelled', 'archived'] as const
 
 export function EditProjectForm({ project, onClose }: Props) {
   const router = useRouter()

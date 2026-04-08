@@ -14,7 +14,7 @@ export type Project = {
   job_type: string | null
   owner: string | null
   priority: 'High' | 'Medium' | 'Low' | null
-  status: 'active' | 'waiting-approval' | 'quoting' | 'on-hold' | 'completed' | 'cancelled'
+  status: 'active' | 'waiting-approval' | 'quoting' | 'on-hold' | 'completed' | 'cancelled' | 'archived'
   quoted_price: number
   budget_cost: number | null
   start_date: string
@@ -146,6 +146,7 @@ export const STATUS_LABELS: Record<string, string> = {
   'on-hold': 'On Hold',
   'completed': 'Completed',
   'cancelled': 'Cancelled',
+  'archived': 'Archived',
 }
 
 export const STATUS_COLORS: Record<string, string> = {
@@ -155,6 +156,7 @@ export const STATUS_COLORS: Record<string, string> = {
   'on-hold': 'bg-amber-100 text-amber-700',
   'completed': 'bg-gray-100 text-gray-600',
   'cancelled': 'bg-red-100 text-red-500',
+  'archived': 'bg-slate-100 text-slate-500',
 }
 
 export function getProjectHealth(project: Project): 'on-track' | 'action-overdue' | 'needs-contract' {

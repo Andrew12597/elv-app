@@ -8,7 +8,7 @@ import type { Project, Expense, Invoice, Task, QuoteItem, ProjectNote } from '@/
 import { GanttChart } from './gantt-chart'
 import { NotesSection } from './notes-section'
 import { EditProjectForm } from './edit-project-form'
-import { Receipt, ArrowLeft, Plus, ExternalLink, Pencil } from 'lucide-react'
+import { Receipt, ArrowLeft, Plus, ExternalLink, Pencil, Archive, Trash2 } from 'lucide-react'
 
 type Props = {
   project: Project
@@ -31,10 +31,21 @@ const invoiceStatusColors: Record<string, string> = {
 export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, notes }: Props) {
   const [tab, setTab] = useState('Overview')
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
   const [addingInvoice, setAddingInvoice] = useState(false)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
+
+  async function archiveProject() {
+    await supabase.from('projects').update({ status: 'archived' }).eq('id', project.id)
+    router.push('/projects')
+  }
+
+  async function deleteProject() {
+    await supabase.from('projects').delete().eq('id', project.id)
+    router.push('/projects')
+  }
 
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
   const totalInvoiced = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + Number(i.amount), 0)
@@ -114,6 +125,20 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
             >
               <Pencil className="h-3.5 w-3.5" /> Edit
             </button>
+            {project.status !== 'archived' && (
+              <button
+                onClick={archiveProject}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-amber-700 border border-gray-200 hover:border-amber-200 px-3 py-1.5 rounded-lg transition-colors bg-white"
+              >
+                <Archive className="h-3.5 w-3.5" /> Archive
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmDelete(d => !d)}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-700 border border-gray-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-colors bg-white"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </button>
           </div>
         </div>
       </div>
@@ -121,6 +146,30 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
       {/* Edit form */}
       {editing && (
         <EditProjectForm project={project} onClose={() => setEditing(false)} />
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-red-700">Permanently delete this project?</p>
+            <p className="text-xs text-red-500 mt-0.5">This will also delete all expenses, invoices, tasks and notes. This cannot be undone.</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={deleteProject}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              Yes, delete
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="bg-white border border-gray-200 text-gray-600 text-xs font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Tabs */}
