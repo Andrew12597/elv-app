@@ -86,23 +86,22 @@ export function ExpensesClient({ expenses, projects }: Props) {
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <div className="flex flex-wrap gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search vendor or description…"
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search vendor or description…"
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-          {/* Project */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <select
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
           >
             <option value="">All projects</option>
             {projects.map(p => (
@@ -110,11 +109,10 @@ export function ExpensesClient({ expenses, projects }: Props) {
             ))}
           </select>
 
-          {/* Cost code */}
           <select
             value={codeFilter}
             onChange={e => setCodeFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-52"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
           >
             <option value="">All cost codes</option>
             {usedCodes.map(code => (
@@ -123,45 +121,63 @@ export function ExpensesClient({ expenses, projects }: Props) {
           </select>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>Date:</span>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <span className="text-gray-400">to</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 items-center">
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From date"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto" />
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="To date"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto" />
+          <input type="number" value={minAmount} onChange={e => setMinAmount(e.target.value)} placeholder="$ Min"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-24" />
+          <input type="number" value={maxAmount} onChange={e => setMaxAmount(e.target.value)} placeholder="$ Max"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-24" />
+        </div>
 
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>$</span>
-            <input type="number" value={minAmount} onChange={e => setMinAmount(e.target.value)} placeholder="Min"
-              className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <span className="text-gray-400">–</span>
-            <input type="number" value={maxAmount} onChange={e => setMaxAmount(e.target.value)} placeholder="Max"
-              className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {hasFilters && (
+              <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+                <X className="h-3.5 w-3.5" /> Clear
+              </button>
+            )}
+            <span className="text-sm text-gray-500">{filtered.length} · <span className="font-semibold text-gray-900">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
           </div>
-
-          {hasFilters && (
-            <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-              <X className="h-3.5 w-3.5" /> Clear filters
-            </button>
-          )}
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-gray-500">{filtered.length} expenses · <span className="font-semibold text-gray-900">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
-            <button
-              onClick={exportCSV}
-              className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              <Download className="h-4 w-4" /> Export CSV
-            </button>
-          </div>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1.5 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <Download className="h-4 w-4" /> CSV
+          </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Mobile: cards */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-100 py-10 text-center text-gray-400 text-sm">No expenses match your filters.</div>
+        ) : filtered.map(e => (
+          <div key={e.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-sm truncate">{e.vendor}</p>
+                <Link href={`/projects/${e.project_id}`} className="text-xs text-blue-600 hover:underline">{e.project_label}</Link>
+              </div>
+              <p className="font-bold text-gray-900 shrink-0">${Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-400 mt-1">
+              <span>{e.date} · <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{e.price_code}</span>{e.description ? ` · ${e.description}` : ''}</span>
+              {e.receipt_url && <a href={e.receipt_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium ml-2">Receipt</a>}
+            </div>
+          </div>
+        ))}
+        {filtered.length > 0 && (
+          <div className="text-right text-sm font-semibold text-gray-700 px-1">
+            Total: ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
