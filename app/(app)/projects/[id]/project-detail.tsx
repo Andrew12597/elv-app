@@ -98,50 +98,46 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
         <Link href="/projects" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3">
           <ArrowLeft className="h-3 w-3" /> Projects
         </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               {project.project_id && (
-                <span className="font-mono font-bold text-blue-700 text-lg">{project.project_id}</span>
+                <span className="font-mono font-bold text-blue-700 text-base sm:text-lg">{project.project_id}</span>
               )}
-              <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">{project.name}</h1>
             </div>
-            <div className="flex items-center gap-3 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-gray-500">
               <span>{project.client}</span>
               {project.job_type && <><span>·</span><span>{project.job_type}</span></>}
               {project.pm && <><span>·</span><span>PM: {project.pm}</span></>}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {project.priority && (
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                project.priority === 'High' ? 'bg-red-100 text-red-700' :
-                project.priority === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                'bg-gray-100 text-gray-500'
-              }`}>{project.priority}</span>
-            )}
-            <span className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${STATUS_COLORS[project.status] ?? 'bg-gray-100 text-gray-600'}`}>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[project.status] ?? 'bg-gray-100 text-gray-600'}`}>
               {STATUS_LABELS[project.status] ?? project.status}
             </span>
             <button
               onClick={() => setEditing(e => !e)}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors bg-white"
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 border border-gray-200 rounded-lg transition-colors bg-white"
+              title="Edit"
             >
-              <Pencil className="h-3.5 w-3.5" /> Edit
+              <Pencil className="h-4 w-4" />
             </button>
             {project.status !== 'archived' && (
               <button
                 onClick={archiveProject}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-amber-700 border border-gray-200 hover:border-amber-200 px-3 py-1.5 rounded-lg transition-colors bg-white"
+                className="hidden sm:flex p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 border border-gray-200 rounded-lg transition-colors bg-white"
+                title="Archive"
               >
-                <Archive className="h-3.5 w-3.5" /> Archive
+                <Archive className="h-4 w-4" />
               </button>
             )}
             <button
               onClick={() => setConfirmDelete(d => !d)}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-700 border border-gray-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-colors bg-white"
+              className="hidden sm:flex p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 border border-gray-200 rounded-lg transition-colors bg-white"
+              title="Delete"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -196,17 +192,17 @@ export function ProjectDetail({ project, expenses, invoices, tasks, quoteItems, 
       {/* Overview */}
       {tab === 'Overview' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: 'Contract Value', value: project.quoted_price > 0 ? `$${Number(project.quoted_price).toLocaleString()}` : '—', sub: project.quoted_price === 0 ? 'No contract yet' : '' },
-              { label: 'Total Costs', value: `$${totalCosts.toLocaleString()}`, sub: `Materials $${totalExpenses.toLocaleString()} · Labour $${totalLabour.toLocaleString()}` },
+              { label: 'Contract', value: project.quoted_price > 0 ? `$${Number(project.quoted_price).toLocaleString()}` : '—', sub: project.quoted_price === 0 ? 'No contract yet' : '' },
+              { label: 'Total Costs', value: `$${totalCosts.toLocaleString()}`, sub: `Mat $${totalExpenses.toLocaleString()} · Lab $${totalLabour.toLocaleString()}` },
               { label: 'Gross Profit', value: project.quoted_price > 0 ? `$${profit.toLocaleString()}` : '—', sub: project.quoted_price > 0 ? `${margin.toFixed(1)}% margin` : '', color: profit >= 0 ? 'text-green-600' : 'text-red-600' },
-              { label: 'Revenue Collected', value: `$${totalInvoiced.toLocaleString()}`, sub: '' },
+              { label: 'Collected', value: `$${totalInvoiced.toLocaleString()}`, sub: '' },
             ].map(stat => (
-              <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
-                <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                <p className={`text-xl font-bold ${stat.color ?? 'text-gray-900'}`}>{stat.value}</p>
-                {stat.sub && <p className="text-xs text-gray-400 mt-0.5">{stat.sub}</p>}
+              <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-3 sm:p-5">
+                <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
+                <p className={`text-base sm:text-xl font-bold ${stat.color ?? 'text-gray-900'}`}>{stat.value}</p>
+                {stat.sub && <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{stat.sub}</p>}
               </div>
             ))}
           </div>

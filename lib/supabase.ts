@@ -82,6 +82,26 @@ export type LabourEntry = {
   created_at: string
 }
 
+export type Employee = {
+  id: string
+  name: string
+  hourly_rate: number
+  active: boolean
+  created_at: string
+}
+
+export type Timesheet = {
+  id: string
+  employee_id: string
+  project_id: string | null
+  location_other: string | null
+  week_ending: string
+  hours: number
+  cost: number
+  notes: string | null
+  created_at: string
+}
+
 export type ProjectNote = {
   id: string
   project_id: string
