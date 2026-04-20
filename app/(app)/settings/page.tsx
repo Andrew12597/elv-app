@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { supabase } from '@/lib/supabase'
 import { Settings } from 'lucide-react'
 import { SettingsClient } from './settings-client'
