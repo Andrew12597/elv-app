@@ -86,6 +86,8 @@ export type Employee = {
   id: string
   name: string
   hourly_rate: number
+  phone: string | null
+  email: string | null
   active: boolean
   created_at: string
 }
