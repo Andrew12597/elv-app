@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase-browser'
 import type { Employee } from '@/lib/supabase'
 import { Plus, Loader2, Trash2, Pencil, Check, X, Phone, Mail, DollarSign, AlertTriangle } from 'lucide-react'
 
@@ -32,7 +32,8 @@ export function SettingsClient({ employees }: Props) {
     e.preventDefault()
     if (!form.name.trim()) { setError('Enter employee name'); return }
     setSaving(true); setError('')
-    const { error: err } = await supabase.from('employees').insert({
+    const sb = createClient()
+    const { error: err } = await sb.from('employees').insert({
       name: form.name.trim(),
       hourly_rate: Number(form.rate) || 0,
       phone: form.phone.trim() || null,
@@ -55,7 +56,8 @@ export function SettingsClient({ employees }: Props) {
   async function handleUpdate(id: string) {
     if (!editForm.name.trim()) { setError('Enter employee name'); return }
     setSaving(true); setError('')
-    const { error: err } = await supabase.from('employees').update({
+    const sb = createClient()
+    const { error: err } = await sb.from('employees').update({
       name: editForm.name.trim(),
       hourly_rate: Number(editForm.rate) || 0,
       phone: editForm.phone.trim() || null,
@@ -68,7 +70,8 @@ export function SettingsClient({ employees }: Props) {
 
   async function handleDelete(id: string) {
     setDeletingId(id)
-    const { error: err } = await supabase.from('employees').delete().eq('id', id)
+    const sb = createClient()
+    const { error: err } = await sb.from('employees').delete().eq('id', id)
     if (err) { setError(err.message) }
     setDeletingId(null)
     setConfirmDeleteId(null)
@@ -76,7 +79,7 @@ export function SettingsClient({ employees }: Props) {
   }
 
   async function toggleActive(emp: Employee) {
-    await supabase.from('employees').update({ active: !emp.active }).eq('id', emp.id)
+    await createClient().from('employees').update({ active: !emp.active }).eq('id', emp.id)
     router.refresh()
   }
 
