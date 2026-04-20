@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase-browser'
 import type { Employee } from '@/lib/supabase'
-import { Plus, Loader2, Trash2, Search, X, Download, Clock } from 'lucide-react'
+import { Plus, Loader2, Trash2, Clock, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 
 type ProjectOption = { id: string; label: string }
@@ -21,7 +20,6 @@ type TimesheetRow = {
   hours: number
   cost: number
   notes: string | null
-  created_at: string
 }
 
 type Props = {
@@ -30,14 +28,13 @@ type Props = {
   projects: ProjectOption[]
 }
 
-const inp = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
-const lbl = 'block text-xs font-semibold text-gray-500 mb-1.5'
+const inp = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white'
 
-export function TimesheetsClient({ timesheets, employees, projects }: Props) {
-  const router = useRouter()
+export function TimesheetsClient({ timesheets: initial, employees, projects }: Props) {
+  const [list, setList] = useState<TimesheetRow[]>(initial)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -51,107 +48,114 @@ export function TimesheetsClient({ timesheets, employees, projects }: Props) {
   const [notes, setNotes] = useState('')
 
   // Filters
-  const [search, setSearch] = useState('')
   const [empFilter, setEmpFilter] = useState('')
   const [projectFilter, setProjectFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const selectedEmp = employees.find(e => e.id === empId)
-  const estimatedCost = selectedEmp && hours ? (selectedEmp.hourly_rate * parseFloat(hours)).toFixed(2) : null
+  const activeEmployees = employees.filter(e => e.active)
+  const selectedEmp = activeEmployees.find(e => e.id === empId)
+  const estimatedCost = selectedEmp && hours ? selectedEmp.hourly_rate * parseFloat(hours) : null
 
   function resetForm() {
     setEmpId(''); setWeekEnding(''); setLocationMode('project')
     setProjectId(''); setLocationOther(''); setHours(''); setNotes('')
-    setError(''); setAdding(false)
+    setError('')
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!empId) { setError('Select an employee'); return }
     if (!weekEnding) { setError('Enter week ending date'); return }
-    if (locationMode === 'project' && !projectId) { setError('Select a project or choose Other'); return }
-    if (locationMode === 'other' && !locationOther.trim()) { setError('Enter location'); return }
+    if (locationMode === 'project' && !projectId) { setError('Select a project'); return }
+    if (locationMode === 'other' && !locationOther.trim()) { setError('Enter a location'); return }
     if (!hours || Number(hours) <= 0) { setError('Enter valid hours'); return }
-    if (!selectedEmp) { setError('Employee not found'); return }
+    if (!selectedEmp) return
 
     const cost = selectedEmp.hourly_rate * Number(hours)
     setSaving(true)
-    const { error: err } = await supabase.from('timesheets').insert({
-      employee_id: empId,
-      project_id: locationMode === 'project' ? projectId : null,
-      location_other: locationMode === 'other' ? locationOther.trim() : null,
-      week_ending: weekEnding,
-      hours: Number(hours),
-      cost,
-      notes: notes.trim() || null,
-    })
-    if (err) { setError(err.message); setSaving(false); return }
+    const { data, error: err } = await createClient()
+      .from('timesheets')
+      .insert({
+        employee_id: empId,
+        project_id: locationMode === 'project' ? projectId : null,
+        location_other: locationMode === 'other' ? locationOther.trim() : null,
+        week_ending: weekEnding,
+        hours: Number(hours),
+        cost,
+        notes: notes.trim() || null,
+      })
+      .select('*, employees(id, name, hourly_rate), projects(id, project_id, name)')
+      .single()
+
     setSaving(false)
+    if (err) { setError(err.message); return }
+
+    const proj = (data as any).projects
+    const newRow: TimesheetRow = {
+      id: data.id,
+      employee_id: empId,
+      employee_name: selectedEmp.name,
+      hourly_rate: selectedEmp.hourly_rate,
+      project_id: data.project_id,
+      project_label: proj ? (proj.project_id ? `${proj.project_id} – ${proj.name}` : proj.name) : null,
+      location_other: data.location_other,
+      week_ending: data.week_ending,
+      hours: Number(data.hours),
+      cost: Number(data.cost),
+      notes: data.notes,
+    }
+    setList(l => [newRow, ...l])
     resetForm()
-    router.refresh()
+    setAdding(false)
   }
 
   async function handleDelete(id: string) {
-    setDeleting(id)
-    await supabase.from('timesheets').delete().eq('id', id)
-    setDeleting(null)
-    router.refresh()
+    setDeletingId(id)
+    await createClient().from('timesheets').delete().eq('id', id)
+    setList(l => l.filter(t => t.id !== id))
+    setDeletingId(null)
   }
 
-  const activeEmployees = employees.filter(e => e.active)
-
-  const filtered = useMemo(() => {
-    return timesheets.filter(t => {
-      if (empFilter && t.employee_id !== empFilter) return false
-      if (projectFilter && t.project_id !== projectFilter) return false
-      if (dateFrom && t.week_ending < dateFrom) return false
-      if (dateTo && t.week_ending > dateTo) return false
-      if (search) {
-        const q = search.toLowerCase()
-        if (!t.employee_name.toLowerCase().includes(q) &&
-            !(t.project_label ?? '').toLowerCase().includes(q) &&
-            !(t.location_other ?? '').toLowerCase().includes(q)) return false
-      }
-      return true
-    })
-  }, [timesheets, empFilter, projectFilter, dateFrom, dateTo, search])
+  const filtered = useMemo(() => list.filter(t => {
+    if (empFilter && t.employee_id !== empFilter) return false
+    if (projectFilter && t.project_id !== projectFilter) return false
+    if (dateFrom && t.week_ending < dateFrom) return false
+    if (dateTo && t.week_ending > dateTo) return false
+    return true
+  }), [list, empFilter, projectFilter, dateFrom, dateTo])
 
   const totalHours = filtered.reduce((s, t) => s + t.hours, 0)
   const totalCost = filtered.reduce((s, t) => s + t.cost, 0)
-  const hasFilters = search || empFilter || projectFilter || dateFrom || dateTo
-
-  function clearFilters() { setSearch(''); setEmpFilter(''); setProjectFilter(''); setDateFrom(''); setDateTo('') }
+  const hasFilters = empFilter || projectFilter || dateFrom || dateTo
 
   function exportCSV() {
-    const headers = ['Week Ending', 'Employee', 'Location', 'Hours', 'Rate ($/hr)', 'Cost', 'Notes']
-    const rows = filtered.map(t => [
-      t.week_ending,
-      t.employee_name,
-      t.project_label ?? t.location_other ?? '',
-      t.hours,
-      t.hourly_rate,
-      t.cost.toFixed(2),
-      t.notes ?? '',
-    ])
+    const headers = ['Week Ending', 'Employee', 'Location', 'Hours', 'Rate', 'Cost', 'Notes']
+    const rows = filtered.map(t => [t.week_ending, t.employee_name, t.project_label ?? t.location_other ?? '', t.hours, `$${t.hourly_rate}/hr`, t.cost.toFixed(2), t.notes ?? ''])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `timesheets-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `timesheets-${new Date().toISOString().slice(0, 10)}.csv`; a.click()
   }
 
   return (
     <div className="space-y-4">
-      {/* Add form */}
-      {adding ? (
-        <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-gray-900">New Timesheet Entry</h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Add button / form */}
+      {!adding ? (
+        <button onClick={() => setAdding(true)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm w-full sm:w-auto justify-center sm:justify-start">
+          <Plus className="h-4 w-4" /> Add Timesheet Entry
+        </button>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">New Timesheet Entry</h3>
+          </div>
+          <form onSubmit={handleSave} className="p-5 space-y-4">
+            {/* Employee */}
             <div>
-              <label className={lbl}>Employee *</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Employee *</label>
               <select value={empId} onChange={e => setEmpId(e.target.value)} className={inp}>
                 <option value="">Select employee…</option>
                 {activeEmployees.map(emp => (
@@ -159,23 +163,23 @@ export function TimesheetsClient({ timesheets, employees, projects }: Props) {
                 ))}
               </select>
             </div>
+
+            {/* Week ending */}
             <div>
-              <label className={lbl}>Week Ending *</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Week Ending *</label>
               <input type="date" value={weekEnding} onChange={e => setWeekEnding(e.target.value)} className={inp} />
             </div>
 
             {/* Location */}
-            <div className="sm:col-span-2">
-              <label className={lbl}>Location *</label>
-              <div className="flex gap-2 mb-2">
-                <button type="button" onClick={() => setLocationMode('project')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${locationMode === 'project' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
-                  Project
-                </button>
-                <button type="button" onClick={() => setLocationMode('other')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${locationMode === 'other' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>
-                  Other Location
-                </button>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Location *</label>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {(['project', 'other'] as const).map(mode => (
+                  <button key={mode} type="button" onClick={() => setLocationMode(mode)}
+                    className={`py-2.5 rounded-xl text-sm font-semibold border transition-colors ${locationMode === mode ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>
+                    {mode === 'project' ? 'Project' : 'Other'}
+                  </button>
+                ))}
               </div>
               {locationMode === 'project' ? (
                 <select value={projectId} onChange={e => setProjectId(e.target.value)} className={inp}>
@@ -187,183 +191,146 @@ export function TimesheetsClient({ timesheets, employees, projects }: Props) {
               )}
             </div>
 
+            {/* Hours */}
             <div>
-              <label className={lbl}>Hours *</label>
-              <input type="number" step="0.5" min="0" max="168" value={hours} onChange={e => setHours(e.target.value)} className={inp} placeholder="e.g. 40" />
-              {estimatedCost && (
-                <p className="text-xs text-blue-600 mt-1 font-medium">Cost: ${Number(estimatedCost).toLocaleString()}</p>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Hours *</label>
+              <input type="number" step="0.5" min="0.5" max="168" value={hours} onChange={e => setHours(e.target.value)} className={inp} placeholder="e.g. 40" />
+              {estimatedCost != null && (
+                <p className="text-xs text-blue-600 font-semibold mt-1.5">
+                  Cost: ${estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
               )}
             </div>
 
+            {/* Notes */}
             <div>
-              <label className={lbl}>Notes</label>
-              <input value={notes} onChange={e => setNotes(e.target.value)} className={inp} placeholder="Optional" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Notes <span className="font-normal text-gray-400">(optional)</span></label>
+              <input value={notes} onChange={e => setNotes(e.target.value)} className={inp} placeholder="e.g. Public holiday, overtime…" />
             </div>
-          </div>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 
-          <div className="flex gap-3 pt-1">
-            <button type="submit" disabled={saving}
-              className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
-              {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Timesheet'}
-            </button>
-            <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button onClick={() => setAdding(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm">
-          <Plus className="h-4 w-4" /> Add Timesheet Entry
-        </button>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={saving}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : 'Save Entry'}
+              </button>
+              <button type="button" onClick={() => { resetForm(); setAdding(false) }}
+                className="flex-1 sm:flex-none px-6 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors border border-gray-200">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
-      {/* Filter bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employee or location…"
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <button onClick={() => setShowFilters(f => !f)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${showFilters || hasFilters ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-            Filters {hasFilters ? `(${[empFilter,projectFilter,dateFrom,dateTo].filter(Boolean).length})` : ''}
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <select value={empFilter} onChange={e => setEmpFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">All employees</option>
-              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-            </select>
-            <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">All projects</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Week from" />
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Week to" />
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {hasFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                <X className="h-3 w-3" /> Clear
-              </button>
-            )}
-            <span className="text-sm text-gray-500">
-              {filtered.length} entries · <span className="font-semibold text-gray-900">{totalHours}h</span> · <span className="font-semibold text-gray-900">${totalCost.toLocaleString()}</span>
-            </span>
-          </div>
-          <button onClick={exportCSV}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-            <Download className="h-3.5 w-3.5" /> CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile: cards */}
-      <div className="md:hidden space-y-2">
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-100 py-12 text-center">
-            <Clock className="h-8 w-8 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">No timesheet entries yet</p>
-          </div>
-        ) : filtered.map(t => (
-          <div key={t.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-semibold text-gray-900 text-sm">{t.employee_name}</p>
-                {t.project_label ? (
-                  <Link href={`/projects/${t.project_id}`} className="text-xs text-blue-600 hover:underline">{t.project_label}</Link>
-                ) : (
-                  <p className="text-xs text-gray-500">{t.location_other}</p>
-                )}
-              </div>
-              <div className="text-right shrink-0">
-                <p className="font-bold text-gray-900">${t.cost.toLocaleString()}</p>
-                <p className="text-xs text-gray-400">{t.hours}h @ ${t.hourly_rate}/hr</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-              <span>Week ending {t.week_ending}{t.notes ? ` · ${t.notes}` : ''}</span>
-              <button onClick={() => handleDelete(t.id)} disabled={deleting === t.id}
-                className="text-gray-300 hover:text-red-500 transition-colors ml-2">
-                {deleting === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              </button>
-            </div>
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Entries', value: filtered.length },
+          { label: 'Hours', value: totalHours },
+          { label: 'Total Cost', value: `$${totalCost.toLocaleString()}` },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+            <p className="text-lg font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Desktop: table */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Week Ending</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Employee</th>
-              <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Location</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Hours</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Rate</th>
-              <th className="text-right px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Cost</th>
-              <th className="px-5 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-gray-400">
-                  <Clock className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  No timesheet entries yet
-                </td>
-              </tr>
-            ) : filtered.map(t => (
-              <tr key={t.id} className="hover:bg-slate-50/50">
-                <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{t.week_ending}</td>
-                <td className="px-5 py-3 font-medium text-gray-900">{t.employee_name}</td>
-                <td className="px-5 py-3">
-                  {t.project_label ? (
-                    <Link href={`/projects/${t.project_id!}`} className="text-blue-700 hover:underline">{t.project_label}</Link>
-                  ) : (
-                    <span className="text-gray-600">{t.location_other}</span>
-                  )}
-                  {t.notes && <span className="text-xs text-gray-400 ml-2">{t.notes}</span>}
-                </td>
-                <td className="px-5 py-3 text-right text-gray-700 font-medium">{t.hours}h</td>
-                <td className="px-5 py-3 text-right text-gray-500">${t.hourly_rate}/hr</td>
-                <td className="px-5 py-3 text-right font-semibold text-gray-900">${t.cost.toLocaleString()}</td>
-                <td className="px-5 py-3 text-right">
-                  <button onClick={() => handleDelete(t.id)} disabled={deleting === t.id}
-                    className="text-gray-300 hover:text-red-500 transition-colors">
-                    {deleting === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {filtered.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-gray-100 bg-gray-50">
-                <td colSpan={3} className="px-5 py-3 text-sm font-semibold text-gray-700">Total</td>
-                <td className="px-5 py-3 text-right font-semibold text-gray-900">{totalHours}h</td>
-                <td />
-                <td className="px-5 py-3 text-right font-bold text-gray-900">${totalCost.toLocaleString()}</td>
-                <td />
-              </tr>
-            </tfoot>
-          )}
-        </table>
+      {/* Filter toggle */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <button onClick={() => setShowFilters(f => !f)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <span className="flex items-center gap-2">
+            Filters
+            {hasFilters && <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">Active</span>}
+          </span>
+          {showFilters ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+        </button>
+        {showFilters && (
+          <div className="px-5 pb-4 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-gray-50">
+            <select value={empFilter} onChange={e => setEmpFilter(e.target.value)}
+              className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">All employees</option>
+              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            </select>
+            <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
+              className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="">All projects</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Week from</p>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Week to</p>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            {hasFilters && (
+              <button onClick={() => { setEmpFilter(''); setProjectFilter(''); setDateFrom(''); setDateTo('') }}
+                className="text-xs text-gray-400 hover:text-gray-700 text-left">
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 text-center">
+          <Clock className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+          <p className="text-sm font-medium text-gray-400">No timesheet entries yet</p>
+          <p className="text-xs text-gray-300 mt-1">Press "Add Timesheet Entry" to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Export */}
+          <div className="flex justify-end">
+            <button onClick={exportCSV}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </button>
+          </div>
+
+          {filtered.map(t => (
+            <div key={t.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-gray-900 text-sm">{t.employee_name}</p>
+                    <span className="text-xs text-gray-400">·</span>
+                    <p className="text-xs text-gray-500">Week ending {t.week_ending}</p>
+                  </div>
+                  <div className="mt-1">
+                    {t.project_label ? (
+                      <Link href={`/projects/${t.project_id}`} className="text-xs text-blue-600 hover:underline font-medium">{t.project_label}</Link>
+                    ) : (
+                      <p className="text-xs text-gray-500">{t.location_other}</p>
+                    )}
+                    {t.notes && <p className="text-xs text-gray-400 mt-0.5">{t.notes}</p>}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-bold text-gray-900">${t.cost.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400">{t.hours}h @ ${t.hourly_rate}/hr</p>
+                </div>
+              </div>
+              <div className="flex justify-end mt-2">
+                <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
+                  className="text-xs text-gray-300 hover:text-red-500 transition-colors flex items-center gap-1">
+                  {deletingId === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  {deletingId === t.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
