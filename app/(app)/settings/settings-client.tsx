@@ -31,13 +31,22 @@ export function SettingsClient({ employees }: Props) {
     e.preventDefault()
     if (!form.name.trim()) { setError('Enter employee name'); return }
     setSaving(true)
-    const { error: err } = await supabase.from('employees').insert({
+    // Try with phone/email first; if columns don't exist yet, save without them
+    let { error: err } = await supabase.from('employees').insert({
       name: form.name.trim(),
       hourly_rate: Number(form.rate) || 0,
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       active: true,
     })
+    if (err?.message?.includes('column') && err.message.includes('does not exist')) {
+      const res = await supabase.from('employees').insert({
+        name: form.name.trim(),
+        hourly_rate: Number(form.rate) || 0,
+        active: true,
+      })
+      err = res.error
+    }
     if (err) { setError(err.message); setSaving(false); return }
     setForm(empty); setAdding(false); setError('')
     setSaving(false)
@@ -53,12 +62,19 @@ export function SettingsClient({ employees }: Props) {
   async function handleUpdate(id: string) {
     if (!editForm.name.trim()) { setError('Enter employee name'); return }
     setSaving(true)
-    const { error: err } = await supabase.from('employees').update({
+    let { error: err } = await supabase.from('employees').update({
       name: editForm.name.trim(),
       hourly_rate: Number(editForm.rate) || 0,
       phone: editForm.phone.trim() || null,
       email: editForm.email.trim() || null,
     }).eq('id', id)
+    if (err?.message?.includes('column') && err.message.includes('does not exist')) {
+      const res = await supabase.from('employees').update({
+        name: editForm.name.trim(),
+        hourly_rate: Number(editForm.rate) || 0,
+      }).eq('id', id)
+      err = res.error
+    }
     if (err) { setError(err.message); setSaving(false); return }
     setEditingId(null); setSaving(false); setError('')
     router.refresh()
